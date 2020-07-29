@@ -9,7 +9,8 @@
     1. `tar cvf dvdrental.tar dvdrental`
 1. Download pgAdmin ("https://www.pgadmin.org/download/") or preferred alternative
 1. Start PostgreSQL server (i.e. `brew services start postgresql`)
-1. Connect pgAdmin with the PostgreSQL server you have started (i.e. localhost, port: 5432)
+    1. in case you have to restart pgAdmin I can recommend: `kill -s TERM $(ps aux | grep '[p]gAdmin4' | awk '{print $2 }') && open -a "pgAdmin 4"`
+1. Start pgAdmin and connect with the PostgreSQL server you have started (i.e. localhost, port: 5432)
 1. Load the DB by choosing "Restore" on the DB in the pgAdmin browser panel and load .tar file
 1. Verify that tables ('actor', 'address' etc) are within the public schema
 
