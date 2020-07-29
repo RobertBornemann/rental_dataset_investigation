@@ -89,20 +89,60 @@ ORDER BY  filmlen_groups
 -- The following categories are considered family movies: Animation, Children, Classics, Comedy, Family and Music.
 -- Thus we create a query that lists each movie in family movies along with the film category it is classified in, and the number of times it has been rented out:
 
-SELECT *
+
+SELECT f.title, c.name, COUNT(rental_id) as nr_times_rented
+FROM category c
+JOIN film_category fc ON c.category_id = fc.category_id
+JOIN film f ON f.film_id = fc.film_id
+JOIN inventory i ON fc.film_id = i.film_id
+JOIN rental r ON i.inventory_id = r.inventory_id
+GROUP BY 1,2
+HAVING c.name IN('Animation', 'Children', 'Classics', 'Comedy', 'Family' , 'Music')
+ORDER BY c.name;
+
+-- Let's look at the length of rental duration of these family-friendly movies and compare it to the duration that all movies are rented for. 
+-- We provide a table with the movie titles and divide them into 4 levels (first_quarter, second_quarter, third_quarter, and final_quarter) 
+-- based on the quartiles (25%, 50%, 75%) 
+
+-- I tried this first:
+
+SELECT film_title, category, rental_duration,	
+	ntile(4) over (partition by rental_duration ) percentile
 FROM (
-	SELECT f.title, c.name, COUNT(rental_id) as nr_times_rented,
-			CASE 
-				WHEN c.name IN('Animation', 'Children', 'Classics', 'Comedy', 'Family' , 'Music') THEN 'family_movies'
-				ELSE 'other'
-			END AS genre
+	SELECT DISTINCT(f.title) AS film_title, c.name AS category, DATE_PART('day', r.return_date - r.rental_date) AS rental_duration 
 	FROM category c
 	JOIN film_category fc ON c.category_id = fc.category_id
 	JOIN film f ON f.film_id = fc.film_id
 	JOIN inventory i ON fc.film_id = i.film_id
 	JOIN rental r ON i.inventory_id = r.inventory_id
-	GROUP BY 1,2
+	WHERE c.name IN('Animation', 'Children', 'Classics', 'Comedy', 'Family' , 'Music') 
+		AND DATE_PART('day', r.return_date - r.rental_date) > 0
 	)t1
-WHERE genre = 'family_movies'
-ORDER BY nr_times_rented DESC
+ORDER BY percentile;
 
+-- but then I found out that there actually is a rental_rate column in the film table. That mean we can further simplyfy and refactor this query:
+
+SELECT DISTINCT(f.title) film_title, c.name category, f.rental_duration, 
+	ntile(4) OVER (ORDER BY rental_duration) standard_quartile
+FROM film f 
+JOIN film_category fc ON f.film_id = fc.film_id
+JOIN category c ON fc.category_id = c.category_id
+WHERE c.name IN('Animation', 'Children', 'Classics', 'Comedy', 'Family' , 'Music') 
+ORDER BY 3,4
+
+-- let's create a table with the family-friendly film category, each of the quartiles, and the corresponding count of movies within each combination of film category
+-- for each corresponding rental duration category. The resulting table should have three columns:
+
+SELECT category, standard_quartile, COUNT(standard_quartile)
+FROM (
+	SELECT DISTINCT(f.title) film_title, c.name category, f.rental_duration, 
+		ntile(4) OVER (ORDER BY rental_duration) standard_quartile
+	FROM film f 
+	JOIN film_category fc ON f.film_id = fc.film_id
+	JOIN category c ON fc.category_id = c.category_id
+	WHERE c.name IN('Animation', 'Children', 'Classics', 'Comedy', 'Family' , 'Music') 
+	ORDER BY 3,4
+	)t1
+GROUP BY 1,2
+ORDER BY 1,2
+	
