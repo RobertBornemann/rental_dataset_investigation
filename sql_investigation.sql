@@ -145,4 +145,47 @@ FROM (
 	)t1
 GROUP BY 1,2
 ORDER BY 1,2
+
+-- We want to find out how the two stores compare in their count of rental orders during every month for all the years we have data for. Write a query that returns the 
+-- store ID for the store, the year and month and the number of rental orders each store has fulfilled for that month. Your table should include a column for each of the 
+-- following: year, month, store ID and count of rental orders fulfilled during that month.
 	
+SELECT DATE_PART('month', r.rental_date), DATE_PART('year', r.rental_date), s.store_id, COUNT(DISTINCT r.rental_id)
+FROM store s
+JOIN staff st ON s.store_id = st.store_id
+JOIN payment py ON st.staff_id = py.staff_id
+JOIN rental r ON py.rental_id = r.rental_id
+GROUP BY 1,2,3
+ORDER BY 4 DESC
+
+SELECT DATE_PART('month', r.rental_date), DATE_PART('year', r.rental_date), s.store_id AS store, 
+	COUNT(r.rental_id) OVER (PARTITION BY s.store_id ORDER BY DATE_PART('YEAR', r.rental_date))
+FROM store s
+JOIN staff st ON s.store_id = st.store_id
+JOIN payment py ON st.staff_id = py.staff_id
+JOIN rental r ON py.rental_id = r.rental_id
+ORDER BY 4 DESC
+
+-- We would like to know who were our top 10 paying customers, how many payments they made on a monthly basis during 2007, and what was the amount of the monthly payments. 
+-- Can you write a query to capture the customer name, month and year of payment, and total payment amount for each month by these top 10 paying customers?
+
+SELECT DATE_TRUNC('month', payment_date) AS pay_mon, concat(c.first_name, ' ', c.last_name) AS fullname, COUNT(amount)  AS pay_counterpermon, sum(amount) as pay_amount 
+FROM payment 
+JOIN customer c ON payment.customer_id = c.customer_id
+WHERE c.customer_id IN(
+	SELECT customer_id
+	FROM (
+		SELECT py.customer_id as customer_id, SUM(py.amount) AS pay_amount
+		FROM payment py
+		WHERE DATE_PART('year', py.payment_date) = 2007
+		GROUP BY 1
+		ORDER BY 2 DESC
+		LIMIT 10
+		)t2)
+GROUP BY 1,2
+ORDER BY 2,1
+
+-- Finally, for each of these top 10 paying customers, I would like to find out the difference across their monthly payments during 2007. 
+-- Please go ahead and write a query to compare the payment amounts in each successive month. Repeat this for each of these 10 paying customers. 
+-- Also, it will be tremendously helpful if you can identify the customer name who paid the most difference in terms of payments.
+
