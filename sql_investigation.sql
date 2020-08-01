@@ -96,6 +96,18 @@ GROUP BY 1,2
 HAVING c.name IN('Animation', 'Children', 'Classics', 'Comedy', 'Family' , 'Music')
 ORDER BY c.name;
 
+-- (EXTRA QUERY) with all categories & total amount paid by movie rental
+SELECT f.title film_title, c.name as category, COUNT(r.rental_date) as nr_times_rented, SUM(p.amount)
+FROM category c
+JOIN film_category fc ON c.category_id = fc.category_id
+JOIN film f ON f.film_id = fc.film_id
+JOIN inventory i ON fc.film_id = i.film_id
+JOIN rental r ON i.inventory_id = r.inventory_id
+JOIN payment p ON r.rental_id = p.rental_id
+GROUP BY 1,2
+ORDER BY 4 DESC
+LIMIT 10;
+
 -- QUESTION SET 1.2: Movie titles divided them into 4 levels (first_quarter, second_quarter, third_quarter, and final_quarter) 
 	-- based on the quartiles (25%, 50%, 75%): 
 SELECT 	DISTINCT(f.title), 
